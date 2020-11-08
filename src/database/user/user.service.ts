@@ -25,6 +25,8 @@ export class UserService {
       return Right({
         id: result.id,
         username: result.username,
+        x: result.x,
+        y: result.y,
       });
     } catch (e) {
       if (e instanceof Error.ValidationError)
@@ -48,6 +50,8 @@ export class UserService {
       return Right({
         id: result.id,
         username: result.username,
+        x: result.x,
+        y: result.y,
       });
     } catch (e) {
       return Left(new NotFound());
@@ -63,8 +67,25 @@ export class UserService {
       return Right({
         id: result.id,
         username: result.username,
+        x: result.x,
+        y: result.y,
       });
     } catch (e) {
+      return Left(new MongoError());
+    }
+  }
+
+  async updateUser(
+    id: string,
+    data: Partial<PublicProfile>
+  ): Promise<Either<NotFound | MongoError, PublicProfile>> {
+    try {
+      const next = await this.user.updateOne({ _id: id }, data);
+      return Right(next);
+    } catch (e) {
+      if (e instanceof Error.DocumentNotFoundError) {
+        return Left(new NotFound());
+      }
       return Left(new MongoError());
     }
   }

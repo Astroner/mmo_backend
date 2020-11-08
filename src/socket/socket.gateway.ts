@@ -21,10 +21,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private players: PlayersService
   ) {}
 
-  handleDisconnect(client: WebSocket): void {
+  async handleDisconnect(client: WebSocket) {
     const id = this.connections.get(client);
     if (!id) return;
-    this.players.removePlayer(id);
+    await this.players.removePlayer(id);
     this.connections.delete(client);
   }
 
@@ -61,7 +61,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.connections.set(client, data.id);
 
-    this.players.addPlayer(data.id, data.username, client);
+    this.players.addPlayer(data.id, data.username, data.x, data.y, client);
 
     return;
   }

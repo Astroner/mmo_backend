@@ -1,8 +1,11 @@
+import { UserService } from '@/database';
+import { asyncChain } from '@/operators/asyncChain';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import WebSocket from 'ws';
 import {
   IntersectionAction,
   OutOfIntersectionAction,
+  ChangePositionEvent,
 } from '../world/world.events';
 import { WorldService } from '../world/world.service';
 
@@ -17,7 +20,7 @@ export class PlayersService implements OnModuleInit {
     }
   >();
 
-  constructor(private world: WorldService) {}
+  constructor(private world: WorldService, private users: UserService) {}
 
   onModuleInit() {
     this.world.events.subscribe(action => {
@@ -67,6 +70,20 @@ export class PlayersService implements OnModuleInit {
             })
           );
         }
+      } else if (action instanceof ChangePositionEvent) {
+        for (const watcher of action.watchers) {
+          if (!this.players.has(watcher.id)) continue;
+          this.players.get(watcher.id).ws.send(
+            JSON.stringify({
+              type: 'changePosition',
+              data: {
+                subjectID: action.subject.id,
+                newX: action.subject.x,
+                newY: action.subject.y,
+              },
+            })
+          );
+        }
       }
     });
   }
@@ -78,14 +95,20 @@ export class PlayersService implements OnModuleInit {
     right: { x: 10, y: 0 },
   };
 
-  addPlayer(id: string, username: string, ws: WebSocket): void {
+  addPlayer(
+    id: string,
+    username: string,
+    x: number,
+    y: number,
+    ws: WebSocket
+  ): void {
     const other = Array.from(this.players.values());
     ws.send(
       JSON.stringify({
         type: 'init',
         data: {
-          x: 0,
-          y: 0,
+          x,
+          y,
           other: other.map(item => ({
             username: item.username,
             id: item.id,
@@ -94,7 +117,7 @@ export class PlayersService implements OnModuleInit {
       })
     );
     this.players.set(id, { id, username, ws });
-    this.world.addObject(id, 0, 0);
+    this.world.addObject(id, x, y);
   }
 
   action(id: string, type: 'move', direction: keyof PlayersService['moveMap']) {
@@ -110,8 +133,11 @@ export class PlayersService implements OnModuleInit {
     };
   }
 
-  removePlayer(id: string): void {
+  async removePlayer(id: string) {
+    const coords = this.world.getCoords(id);
     this.world.removeObject(id);
     this.players.delete(id);
+
+    await asyncChain(coords, coords => this.users.updateUser(id, coords));
   }
 }

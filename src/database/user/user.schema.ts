@@ -11,6 +11,12 @@ export class MongoUser extends Document implements UserInterface {
 
   @Prop({ type: String, required: true, unique: true })
   password: string;
+
+  @Prop({ type: Number, required: true, default: 0 })
+  x: number;
+
+  @Prop({ type: Number, required: true, default: 0 })
+  y: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(MongoUser);

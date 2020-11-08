@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { Either, Left, Right } from 'monet';
 import { Subject } from 'rxjs';
+import { ObjectNotFound } from './world.errors';
 
-import { IntersectionAction, OutOfIntersectionAction } from './world.events';
+import {
+  IntersectionAction,
+  OutOfIntersectionAction,
+  ChangePositionEvent,
+} from './world.events';
 
 const viewRange = 10;
 
@@ -13,7 +19,9 @@ export type Item = {
 
 @Injectable()
 export class WorldService {
-  public events = new Subject<IntersectionAction | OutOfIntersectionAction>();
+  public events = new Subject<
+    IntersectionAction | OutOfIntersectionAction | ChangePositionEvent
+  >();
 
   private items = new Map<string, Item>();
 
@@ -22,7 +30,6 @@ export class WorldService {
 
   addObject(id: string, x: number, y: number) {
     const item = this.addItemToList({ id, x, y });
-
     const intersecting = this.getIntersections(item);
 
     this.events.next(new IntersectionAction(intersecting, item));
@@ -73,17 +80,27 @@ export class WorldService {
     const toAdd = nextIntersections.filter(
       id => !curIntersections.includes(id)
     );
-    this.events.next(new OutOfIntersectionAction(toRemove, item));
-    this.events.next(new IntersectionAction(toAdd, item));
+    const watchers = curIntersections.filter(id =>
+      nextIntersections.includes(id)
+    );
 
     this.removeItemFromList(item);
 
-    item.x = item.x + xShift;
-    item.y = item.y + yShift;
+    item.x += xShift;
+    item.y += yShift;
 
     this.addItemToList(item);
 
+    this.events.next(new OutOfIntersectionAction(toRemove, item));
+    this.events.next(new IntersectionAction(toAdd, item));
+    this.events.next(new ChangePositionEvent(item, watchers));
+
     return item;
+  }
+
+  getCoords(id: string): Either<ObjectNotFound, Item> {
+    if (!this.items.has(id)) return Left(new ObjectNotFound(id));
+    return Right(this.items.get(id));
   }
 
   private removeItemFromList(item: Item) {
