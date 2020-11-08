@@ -8,6 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useWebSocketAdapter(new WsAdapter(app));
   app.useGlobalPipes(new ValidationPipe());
+  app.enableCors();
   await app.listen(env.DAEMON_PORT);
   console.log(`Started on ${env.DAEMON_HOST}:${env.DAEMON_PORT}`);
 }
