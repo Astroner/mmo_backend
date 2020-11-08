@@ -6,10 +6,20 @@ import * as bcrypt from 'bcrypt';
 import { PublicProfile } from './user.interface';
 import { MongoUser } from './user.schema';
 import { NonUniqueError, NotFound, MongoError } from './user.errors';
+import { transformEntity } from './helpers';
 
 @Injectable()
 export class UserService {
   constructor(@InjectModel(MongoUser.name) private user: Model<MongoUser>) {}
+
+  async getAll(): Promise<Either<MongoError, PublicProfile[]>> {
+    try {
+      const res = await this.user.find();
+      return Right(res.map(transformEntity));
+    } catch (e) {
+      return Left(new MongoError());
+    }
+  }
 
   async createUser(
     username: string,
@@ -22,12 +32,7 @@ export class UserService {
 
     try {
       const result = await user.save();
-      return Right({
-        id: result.id,
-        username: result.username,
-        x: result.x,
-        y: result.y,
-      });
+      return Right(transformEntity(result));
     } catch (e) {
       if (e instanceof Error.ValidationError)
         return Left(new NonUniqueError('username', username));
@@ -47,12 +52,7 @@ export class UserService {
         return Left(new NotFound());
       }
 
-      return Right({
-        id: result.id,
-        username: result.username,
-        x: result.x,
-        y: result.y,
-      });
+      return Right(transformEntity(result));
     } catch (e) {
       return Left(new NotFound());
     }
@@ -64,12 +64,7 @@ export class UserService {
     try {
       const result = await this.user.findById(id);
       if (!result) return Left(new NotFound());
-      return Right({
-        id: result.id,
-        username: result.username,
-        x: result.x,
-        y: result.y,
-      });
+      return Right(transformEntity(result));
     } catch (e) {
       return Left(new MongoError());
     }
