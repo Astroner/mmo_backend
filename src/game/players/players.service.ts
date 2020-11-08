@@ -89,10 +89,10 @@ export class PlayersService implements OnModuleInit {
   }
 
   private moveMap = {
-    up: { x: 0, y: 10 },
-    left: { x: -10, y: 0 },
-    down: { x: 0, y: -10 },
-    right: { x: 10, y: 0 },
+    up: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    down: { x: 0, y: -1 },
+    right: { x: 1, y: 0 },
   };
 
   addPlayer(
