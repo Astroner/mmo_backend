@@ -48,7 +48,7 @@ export class UserService {
       const result = await this.user.findOne({
         username,
       });
-      if (!result || !bcrypt.compare(result.password, password)) {
+      if (!result || !(await bcrypt.compare(result.password, password))) {
         return Left(new NotFound());
       }
 
